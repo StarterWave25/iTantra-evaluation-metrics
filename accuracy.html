@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speech Recognition Performance Evaluation</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Telugu:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --accent: #0284c7;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --green-border: #86efac;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --red-border: #fca5a5;
+      --amber: #d97706;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --code-bg: #0d1117;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #cbd5e1;
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 30px;
+      padding: 30px 20px;
+    }
+
+    /* 16:9 Slide Aspect Ratio Container */
+    .slide-container {
+      width: 100%;
+      max-width: 1280px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      padding: 28px 36px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    /* Slide Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+
+    .title-group h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #0f172a;
+    }
+
+    .title-group p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .tag {
+      background: rgba(2, 132, 199, 0.08);
+      color: var(--accent);
+      border: 1px solid rgba(2, 132, 199, 0.2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    /* Main Grid Layout */
+    .slide-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex: 1;
+    }
+
+    /* Column Cards */
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+    }
+
+    .card-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    /* Formulas Section */
+    .formula-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .formula-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.88rem;
+      margin-bottom: 4px;
+      color: #1e293b;
+    }
+
+    .formula-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .formula-val {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      border-top: 1px dashed var(--border);
+      padding-top: 6px;
+      margin-bottom: 12px;
+    }
+
+    .legend strong {
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* English Proof Grid */
+    .proof-section {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .proof-header {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 500;
+    }
+
+    .word-grid {
+      display: grid;
+      grid-template-columns: 40px repeat(4, 1fr);
+      gap: 6px;
+      align-items: center;
+    }
+
+    .grid-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+
+    .word-card {
+      padding: 6px 4px;
+      text-align: center;
+      border-radius: 6px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid transparent;
+    }
+
+    .word-card.error {
+      background: var(--red-bg);
+      border-color: var(--red-border);
+      color: #991b1b;
+    }
+
+    .word-card.correct {
+      background: var(--green-bg);
+      border-color: var(--green-border);
+      color: #166534;
+    }
+
+    /* Calculation Result */
+    .calc-results {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+    }
+
+    .calc-stat {
+      color: var(--text-muted);
+    }
+
+    .calc-stat span {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .calc-summary {
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .calc-summary .wer { color: var(--red); }
+    .calc-summary .acc { color: var(--green); }
+
+    /* Chart Container */
+    .chart-container {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 200px;
+    }
+
+    /* Interactive Navigation Bar */
+    .nav-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+      background: #e2e8f0;
+      padding: 6px;
+      border-radius: 10px;
+    }
+
+    .nav-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.5);
+      color: var(--text);
+    }
+
+    .nav-btn.active {
+      background: #ffffff;
+      color: var(--accent);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Tab Content Boxes */
+    .tab-content {
+      display: none;
+      min-height: 380px;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Data Table Design with Hidden Scrollbars */
+    .data-table-container {
+      overflow-y: auto;
+      max-height: 380px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #ffffff;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none;  /* IE and Edge */
+    }
+
+    .data-table-container::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      background: #f1f5f9;
+      color: var(--text-muted);
+      font-weight: 700;
+      padding: 10px 12px;
+      text-transform: uppercase;
+      font-size: 0.68rem;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid var(--border);
+      z-index: 10;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) { background: #f8fafc; }
+
+    .telugu-font { font-family: 'Noto Sans Telugu', sans-serif; }
+    .hindi-font { font-family: 'Noto Sans Devanagari', sans-serif; }
+
+    /* Redesigned Code Window Styling with Hidden Scrollbars */
+    .code-wrapper {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .code-header {
+      background: #161b22;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #30363d;
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .code-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-red { background: #ff5f56; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #27c93f; }
+
+    .code-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: #8b949e;
+      font-weight: 500;
+    }
+
+    .code-card {
+      background: #0d1117;
+      color: #e6edf3;
+      padding: 18px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.7;
+      white-space: pre;
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 330px;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE and Edge */
+    }
+
+    .code-card::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+
+    .code-card .keyword { color: #ff7b72; font-weight: 600; }
+    .code-card .function { color: #d2a8ff; }
+    .code-card .string { color: #a5d6ff; }
+    .code-card .comment { color: #8b949e; font-style: italic; }
+    .code-card .number { color: #79c0ff; }
+
+    /* Slide Footer */
+    footer {
+      margin-top: 16px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .footer-highlight {
+      color: var(--amber);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== SLIDE 1: OVERVIEW DASHBOARD ==================== -->
+  <div class="slide-container">
+    <header>
+      <div class="title-group">
+        <h1>Speech Recognition Performance Evaluation</h1>
+        <p>Comparative Accuracy & Error Rate Analysis across Languages</p>
+      </div>
+      <div class="tag">1 • Executive Summary</div>
+    </header>
+
+    <div class="slide-body">
+      <!-- Left Column: Formula & Proof -->
+      <div class="card">
+        <div>
+          <div class="card-title">Evaluation Metrics & Mathematical Proof</div>
+          
+          <div class="formula-box">
+            <div class="formula-row">
+              <span>Word Error Rate (WER)</span>
+              <span class="formula-val">(S + D + I) / N</span>
+            </div>
+            <div class="formula-row">
+              <span>Accuracy</span>
+              <span class="formula-val">100% − WER%</span>
+            </div>
+          </div>
+
+          <div class="legend">
+            <div><strong>S:</strong> Substitutions</div>
+            <div><strong>D:</strong> Deletions</div>
+            <div><strong>I:</strong> Insertions</div>
+            <div><strong>N:</strong> Reference Words</div>
+          </div>
+        </div>
+
+        <div class="proof-section">
+          <div class="proof-header">
+            <span>PROOF — APPLIED TO OUR OWN DATA</span>
+            <span>English — Sentence 10</span>
+          </div>
+
+          <div class="word-grid">
+            <div class="grid-label">REF</div>
+            <div class="word-card correct">We</div>
+            <div class="word-card correct">can</div>
+            <div class="word-card error">leave</div>
+            <div class="word-card correct">now.</div>
+
+            <div class="grid-label">STT</div>
+            <div class="word-card correct">We</div>
+            <div class="word-card correct">can</div>
+            <div class="word-card error">start</div>
+            <div class="word-card correct">now</div>
+          </div>
+
+          <div class="calc-results">
+            <div class="calc-stat">N=<span>4</span> | S=<span>1</span> | D=<span>0</span> | I=<span>0</span></div>
+            <div class="calc-summary">
+              <span class="wer">WER = 25.0%</span> → <span class="acc">Acc = 75.0%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Chart -->
+      <div class="card">
+        <div class="card-title">Same Metric, Full Dataset (30 Sentences)</div>
+        <div class="chart-container">
+          <canvas id="accuracyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div>Dataset: 30 Evaluated Sentences (English, Hindi, Telugu) — Please refer to the table below</div>
+      <div>Overall Baseline Accuracy: <span class="footer-highlight">72.1%</span></div>
+    </footer>
+  </div>
+
+  <!-- ==================== SLIDE 2: INTERACTIVE DATASET & CODE ==================== -->
+  <div class="slide-container">
+    <header>
+      <div class="title-group">
+        <h1>Sentence Dataset & Evaluation Code</h1>
+      </div>
+      <div class="tag">2 • Interactive Data</div>
+    </header>
+
+    <!-- 4 Navigation Buttons -->
+    <div class="nav-bar">
+      <button class="nav-btn active" onclick="showTab('english')">English</button>
+      <button class="nav-btn" onclick="showTab('hindi')">Hindi</button>
+      <button class="nav-btn" onclick="showTab('telugu')">Telugu</button>
+      <button class="nav-btn" onclick="showTab('code')">Evaluation Code</button>
+    </div>
+
+    <!-- TAB 1: ENGLISH (All 10 Examples) -->
+    <div id="english" class="tab-content active">
+      <div class="data-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>Reference Text</th>
+              <th>Actual STT Output Text</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>Hello, how are you today?</td><td>Hello, how are you today</td></tr>
+            <tr><td>2</td><td>I am going to Hyderabad today.</td><td>I'm going to Hyderabad today</td></tr>
+            <tr><td>3</td><td>Please close the door.</td><td>Please close the door</td></tr>
+            <tr><td>4</td><td>Could you please say that again?</td><td>Could you please say that again</td></tr>
+            <tr><td>5</td><td>The meeting is at eight o'clock tomorrow morning.</td><td>The meeting is at eight o'clock tomorrow morning</td></tr>
+            <tr><td>6</td><td>Where can I find water?</td><td>Where can I find drinking water</td></tr>
+            <tr><td>7</td><td>My phone battery is very low.</td><td>My phone battery is low</td></tr>
+            <tr><td>8</td><td>In case of emergency send information immediately.</td><td>In case of emergency send info immediately</td></tr>
+            <tr><td>9</td><td>The train has not arrived at the station yet.</td><td>The train has not arrived at station yet</td></tr>
+            <tr><td>10</td><td>We can leave now.</td><td>We can start now</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 2: HINDI (All 10 Examples) -->
+    <div id="hindi" class="tab-content">
+      <div class="data-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>Reference Text</th>
+              <th>Actual STT Output Text</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td class="hindi-font">नमस्ते, आप आज कैसे हैं?</td><td class="hindi-font">नमस्ते आवाज कैसे हैई</td></tr>
+            <tr><td>2</td><td class="hindi-font">मैं आज हैदराबाद जा रहा हूँ।</td><td class="hindi-font">मैं आज हैदराबाद जा रहा हूं</td></tr>
+            <tr><td>3</td><td class="hindi-font">कृपया दरवाज़ा बंद कर दीजिए।</td><td class="hindi-font">कृपया दरवाजा बंद कर दीजिए</td></tr>
+            <tr><td>4</td><td class="hindi-font">क्या आप कृपया फिर से कह सकते हैं?</td><td class="hindi-font">क्या आप कृपया फिर से कह सकते हैं</td></tr>
+            <tr><td>5</td><td class="hindi-font">कल सुबह आठ बजे बैठक है।</td><td class="hindi-font">कल सुबह आठ बजे बैठक आई</td></tr>
+            <tr><td>6</td><td class="hindi-font">पानी कहाँ मिलेगा?</td><td class="hindi-font">पानी कहां मिलेगा</td></tr>
+            <tr><td>7</td><td class="hindi-font">मेरे फोन की बैटरी बहुत कम है।</td><td class="hindi-font">मेरे फोन की बैटरी बहुत कम है</td></tr>
+            <tr><td>8</td><td class="hindi-font">आपतकालीन स्थिति में तुरंत सूचना भेजें।</td><td class="hindi-font">आपातकालीन स्थिति में तुरंत सूचना भेजें</td></tr>
+            <tr><td>9</td><td class="hindi-font">ट्रेन अभी स्टेशन पर नहीं आई है।</td><td class="hindi-font">ट्रेन अभी स्टेशन पर नहीं आई है</td></tr>
+            <tr><td>10</td><td class="hindi-font">हम अब निकल सकते हैं।</td><td class="hindi-font">हम अब निकल सकते हैं</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 3: TELUGU (All 10 Examples) -->
+    <div id="telugu" class="tab-content">
+      <div class="data-table-container">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">#</th>
+              <th>Reference Text</th>
+              <th>Actual STT Output Text</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td class="telugu-font">నమస్కారం, మీరు ఎలా ఉన్నారు?</td><td class="telugu-font">నమస్కారం మీరు ఎలా ఉన్నారు.</td></tr>
+            <tr><td>2</td><td class="telugu-font">నేను ఈరోజు హైదరాబాద్ వెళ్తున్నాను.</td><td class="telugu-font">నేను ఈరోజు హైదరాబాద్ వెళ్తున్నాను</td></tr>
+            <tr><td>3</td><td class="telugu-font">దయచేసి తలుపు మూసివేయండి.</td><td class="telugu-font">దయచేసి తలుపు మూసి వేయండి</td></tr>
+            <tr><td>4</td><td class="telugu-font">మీరు నాకు ఒకసారి మళ్లీ చెప్పగలరా?</td><td class="telugu-font">మీరు నాకు ఒకసారి మళ్లీ చెప్పగలరా</td></tr>
+            <tr><td>5</td><td class="telugu-font">రేపు ఉదయం ఎనిమిది గంటలకు సమావేశం ఉంది.</td><td class="telugu-font">రేపు ఉదయం ఎనిమిది గంటలకు సమావేశం ఉంది.</td></tr>
+            <tr><td>6</td><td class="telugu-font">నీళ్లు ఎక్కడ దొరుకుతాయి?</td><td class="telugu-font">నీళ్లు ఎక్కడ దొరుకుతాయి.</td></tr>
+            <tr><td>7</td><td class="telugu-font">నా ఫోన్ బ్యాటరీ చాలా తక్కువగా ఉంది.</td><td class="telugu-font">నా ఫోన్ బ్యాటరీ చాలా తక్కువగా ఉంది</td></tr>
+            <tr><td>8</td><td class="telugu-font">అత్యవసర పరిస్థితి ఉంటే వెంటనే సమాచారం పంపండి.</td><td class="telugu-font">అత్యవసర పరిస్థితి ఉంటే వెంటనే సమాచారం పంపండి</td></tr>
+            <tr><td>9</td><td class="telugu-font">రైలు ఇంకా స్టేషన్‌కు రాలేదు.</td><td class="telugu-font">రైలు ఇంకా స్టేషన్ కు రాలేదు</td></tr>
+            <tr><td>10</td><td class="telugu-font">మనము ఇప్పుడు బయలుదేరవచ్చు.</td><td class="telugu-font">మనం ఇప్పుడు బయల్దేరవచ్చు</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: EVALUATION CODE -->
+    <div id="code" class="tab-content">
+      <div class="code-wrapper">
+        <div class="code-header">
+          <div class="code-dots">
+            <div class="code-dot dot-red"></div>
+            <div class="code-dot dot-yellow"></div>
+            <div class="code-dot dot-green"></div>
+          </div>
+          <div class="code-title">evaluate_wer.py</div>
+        </div>
+        <div class="code-card"><span class="keyword">import</span> pandas <span class="keyword">as</span> pd
+<span class="keyword">from</span> jiwer <span class="keyword">import</span> wer
+
+<span class="comment"># Load Reference & STT Output CSV files</span>
+ref = pd.<span class="function">read_csv</span>(<span class="string">"reference.csv"</span>)
+stt = pd.<span class="function">read_csv</span>(<span class="string">"stt_output.csv"</span>)
+
+df = ref.<span class="function">copy</span>()
+df[<span class="string">"stt_text"</span>] = stt[<span class="string">"stt_text"</span>]
+
+<span class="comment"># Calculate Word Error Rate (WER) and Accuracy (%)</span>
+df[<span class="string">"wer"</span>] = df.<span class="function">apply</span>(
+    <span class="keyword">lambda</span> r: <span class="function">wer</span>(<span class="function">str</span>(r[<span class="string">"reference_text"</span>]), <span class="function">str</span>(r[<span class="string">"stt_text"</span>])), 
+    axis=<span class="number">1</span>
+)
+df[<span class="string">"accuracy"</span>] = (<span class="number">1.0</span> - df[<span class="string">"wer"</span>]).<span class="function">clip</span>(lower=<span class="number">0</span>) * <span class="number">100</span>
+
+<span class="comment"># Aggregate Average Accuracy per Language</span>
+summary = df.<span class="function">groupby</span>(<span class="string">"language"</span>)[<span class="string">"accuracy"</span>].<span class="function">mean</span>().<span class="function">reset_index</span>()
+<span class="function">print</span>(summary)</div>
+      </div>
+    </div>
+
+    <footer>
+      <div>Displaying Ground Truth Datasets & Core Evaluation Logic</div>
+      <div>Click Navigation Tabs to Switch Languages</div>
+    </footer>
+  </div>
+
+  <script>
+    // Tab Navigation Logic
+    function showTab(tabId) {
+      // Hide all contents
+      const contents = document.querySelectorAll('.tab-content');
+      contents.forEach(c => c.classList.remove('active'));
+
+      // Deactivate all buttons
+      const buttons = document.querySelectorAll('.nav-btn');
+      buttons.forEach(b => b.classList.remove('active'));
+
+      // Show selected content
+      document.getElementById(tabId).classList.add('active');
+
+      // Activate clicked button
+      event.currentTarget.classList.add('active');
+    }
+
+    // Chart.js Setup for Slide 1
+    const ctx = document.getElementById('accuracyChart').getContext('2d');
+    
+    const overallLinePlugin = {
+      id: 'overallLine',
+      beforeDraw(chart) {
+        const { ctx, chartArea: { left, right }, scales: { y } } = chart;
+        const yValue = y.getPixelForValue(72.1);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.setLineDash([6, 6]);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#0284c7';
+        ctx.moveTo(left, yValue);
+        ctx.lineTo(right, yValue);
+        ctx.stroke();
+
+        ctx.fillStyle = '#0284c7';
+        ctx.font = '600 12px Inter';
+        ctx.textAlign = 'right';
+        ctx.fillText('Overall: 72.1%', right, yValue - 8);
+        ctx.restore();
+      }
+    };
+
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['English', 'Hindi', 'Telugu'],
+        datasets: [{
+          data: [79.8, 73.6, 63.0],
+          backgroundColor: ['#f59e0b', '#f59e0b', '#f59e0b'],
+          borderRadius: 6,
+          borderSkipped: false,
+          barThickness: 50
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: { label: (context) => `Accuracy: ${context.raw}%` }
+          }
+        },
+        scales: {
+          y: {
+            min: 0,
+            max: 100,
+            ticks: {
+              stepSize: 20,
+              color: '#64748b',
+              font: { family: 'Inter', size: 11 },
+              callback: (val) => val + '%'
+            },
+            grid: { color: '#e2e8f0' },
+            title: {
+              display: true,
+              text: 'Accuracy (%)',
+              color: '#64748b',
+              font: { family: 'Inter', size: 12, weight: '500' }
+            }
+          },
+          x: {
+            ticks: {
+              color: '#0f172a',
+              font: { family: 'Inter', size: 13, weight: '600' }
+            },
+            grid: { display: false }
+          }
+        }
+      },
+      plugins: [{
+        id: 'barLabels',
+        afterDraw(chart) {
+          const { ctx } = chart;
+          chart.data.datasets[0].data.forEach((datapoint, index) => {
+            const meta = chart.getDatasetMeta(0);
+            const x = meta.data[index].x;
+            const y = meta.data[index].y;
+            
+            ctx.save();
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 13px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText(`${datapoint.toFixed(1)}%`, x, y - 8);
+            ctx.restore();
+          });
+        }
+      }, overallLinePlugin]
+    });
+  </script>
+</body>
+</html>
