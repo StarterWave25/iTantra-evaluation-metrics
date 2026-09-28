@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>iTantra - Voice Latency Benchmark Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --accent: #0284c7;
+            --purple: #7c3aed;
+            --green: #16a34a;
+            --green-bg: #dcfce7;
+            --red: #dc2626;
+            --amber: #d97706;
+            --amber-bg: #fef3c7;
+            --amber-border: #fcd34d;
+            --text: #0f172a;
+            --text-muted: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #cbd5e1;
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            padding: calc(24px + env(safe-area-inset-top, 0px)) 20px calc(24px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .slide-container {
+            width: 100%;
+            max-width: 1280px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            padding: 28px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .title-group h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #0f172a;
+        }
+
+        .title-group p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .status-badge {
+            background: var(--green-bg);
+            color: var(--green);
+            border: 1px solid #bbf7d0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .metric-card .label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .metric-card .value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .metric-card .value.blue {
+            color: var(--accent);
+        }
+
+        .metric-card .value.purple {
+            color: var(--purple);
+        }
+
+        .metric-card .value.green {
+            color: var(--green);
+        }
+
+        .metric-card .subtext {
+            font-size: 0.74rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        }
+
+        .card.full-width {
+            grid-column: span 2;
+        }
+
+        .card-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--accent);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+        }
+
+        .summary-table-wrap {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #ffffff;
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            text-align: left;
+        }
+
+        th {
+            background: #f1f5f9;
+            color: var(--text-muted);
+            font-weight: 700;
+            padding: 10px 14px;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+        }
+
+        td.stage-name {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .shot-placeholder {
+            border: 2px dashed #94a3b8;
+            border-radius: 10px;
+            background: #f1f5f9;
+            min-height: 240px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 20px;
+            transition: background 0.2s ease;
+        }
+
+        .shot-placeholder:hover {
+            background: #e2e8f0;
+        }
+
+        .shot-placeholder svg {
+            width: 36px;
+            height: 36px;
+            stroke: #64748b;
+            opacity: 0.85;
+        }
+
+        .shot-img {
+            width: 100%;
+            height: 90%;
+        }
+
+        .shot-placeholder .shot-label {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .shot-placeholder .shot-hint {
+            font-size: 0.72rem;
+            color: #64748b;
+            max-width: 480px;
+            line-height: 1.4;
+        }
+
+        .note-box {
+            background: var(--amber-bg);
+            border: 1px solid var(--amber-border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.8rem;
+            color: #78350f;
+            line-height: 1.5;
+        }
+
+        footer {
+            padding-top: 10px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .footer-highlight {
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        @media (max-width: 900px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .card.full-width {
+                grid-column: span 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="slide-container">
+        <header>
+            <div class="title-group">
+                <h1>Voice Latency Profiling - iTantra</h1>
+                <p>Measured Speech processing, Text-to-Speech synthesis, and Turnaround metrics</p>
+            </div>
+            <div class="status-badge">Target &lt; 250 ms: PASSED</div>
+        </header>
+
+        <!-- Top Key Metrics -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="label">On-Device STT (INT8)</div>
+                <div class="value blue">146.5 <span style="font-size: 1rem;">ms</span></div>
+                <div class="subtext">0.1465s speech-to-text processing</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Neural TTS Synthesis</div>
+                <div class="value purple">89.9 <span style="font-size: 1rem;">ms</span></div>
+                <div class="subtext">0.0899s voice audio generation</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Application Turnaround</div>
+                <div class="value green">242.9 <span style="font-size: 1rem;">ms</span></div>
+                <div class="subtext">Combined internal processing path</div>
+            </div>
+            <div class="metric-card">
+                <div class="label">Benchmark Limit</div>
+                <div class="value">250.0 <span style="font-size: 1rem;">ms</span></div>
+                <div class="subtext">Threshold target (Passed)</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <div class="card">
+                <div class="card-title">Major Component Latency Breakdown</div>
+                <div class="chart-container">
+                    <canvas id="componentChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Turnaround vs Benchmark Threshold</div>
+                <div class="chart-container">
+                    <canvas id="thresholdChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Micro Stages Table -->
+            <div class="card full-width">
+                <div class="card-title">Detailed Pipeline Micro-Stages Breakdown</div>
+                <div class="summary-table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pipeline Micro-Stage</th>
+                                <th>Measured Latency</th>
+                                <th>Share of Total</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="stage-name">On-Device STT Acoustic AI (INT8)</td>
+                                <td>146.500 ms</td>
+                                <td>60.31%</td>
+                                <td>Acoustic Recognition</td>
+                            </tr>
+                            <tr>
+                                <td class="stage-name">Neural TTS Voice Synthesis</td>
+                                <td>89.900 ms</td>
+                                <td>37.01%</td>
+                                <td>Audio Synthesis</td>
+                            </tr>
+                            <tr>
+                                <td class="stage-name">Speech Token / Text Cleaning</td>
+                                <td>1.728 ms</td>
+                                <td>0.71%</td>
+                                <td>Text Processing</td>
+                            </tr>
+                            <tr>
+                                <td class="stage-name">Packet Encoding</td>
+                                <td>1.112 ms</td>
+                                <td>0.46%</td>
+                                <td>Network Prep</td>
+                            </tr>
+                            <tr>
+                                <td class="stage-name">Packet Parsing</td>
+                                <td>0.343 ms</td>
+                                <td>0.14%</td>
+                                <td>Network Prep</td>
+                            </tr>
+                            <tr>
+                                <td class="stage-name">Language Identification</td>
+                                <td>0.182 ms</td>
+                                <td>0.07%</td>
+                                <td>Inference Routing</td>
+                            </tr>
+                            <tr>
+                                <td class="stage-name">Model Pointer Hot-Swap</td>
+                                <td>0.001 ms</td>
+                                <td>&lt;0.01%</td>
+                                <td>Memory Management</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Logcat Screenshot Proof Placeholder -->
+            <div class="card full-width">
+                <div class="card-title">Android Logcat Telemetry Verification Proof</div>
+                <div class="shot-placeholder">
+                    <img src="img/latency-metrics.jpeg" class="shot-img" alt="">
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Note -->
+        <div class="note-box">
+            <strong>Measurement Clarification:</strong> 242.9 ms reflects internal application pipeline turnaround time
+            (local STT + pipeline processing + TTS synthesis). For true cross-device end-to-end latency presentation
+            (SIH criteria), actual network transport and physical audio output onset timers should be added.
+        </div>
+
+        <footer>
+            <div>Metric Source: <span class="footer-highlight">Android Logcat Benchmark Telemetry</span></div>
+            <div>Target Verification: Internal Walkie-Talkie Benchmark (&lt; 250 ms)</div>
+        </footer>
+    </div>
+
+    <script>
+        // Component Breakdown Chart
+        const compCtx = document.getElementById('componentChart').getContext('2d');
+        new Chart(compCtx, {
+            type: 'bar',
+            data: {
+                labels: ['STT Processing', 'TTS Synthesis', 'Micro-Tasks (Combined)'],
+                datasets: [{
+                    label: 'Latency (ms)',
+                    data: [146.5, 89.9, 3.366],
+                    backgroundColor: ['#0284c7', '#7c3aed', '#64748b'],
+                    borderRadius: 6,
+                    barThickness: 28
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (c) => `${c.raw} ms` } }
+                },
+                scales: {
+                    y: { min: 0, max: 180, ticks: { callback: v => v + ' ms' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Threshold Comparison Chart
+        const threshCtx = document.getElementById('thresholdChart').getContext('2d');
+        new Chart(threshCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Turnaround Latency', 'Benchmark Target'],
+                datasets: [{
+                    label: 'Duration (ms)',
+                    data: [242.9, 250.0],
+                    backgroundColor: ['#16a34a', '#cbd5e1'],
+                    borderRadius: 6,
+                    barThickness: 34
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: (c) => `${c.raw} ms` } }
+                },
+                scales: {
+                    x: { min: 0, max: 300, ticks: { callback: v => v + ' ms' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
